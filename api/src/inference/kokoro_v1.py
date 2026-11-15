@@ -158,7 +158,7 @@ class KokoroV1(BaseModelBackend):
             pipeline = self._get_pipeline(pipeline_lang_code)
 
             logger.debug(
-                f"Generating audio from tokens with lang_code '{pipeline_lang_code}': '{tokens[:100]}{'...' if len(tokens) > 100 else ''}'"
+                f"Generating audio from tokens with lang_code '{pipeline_lang_code}' ({len(tokens)} chars)"
             )
             for result in pipeline.generate_from_tokens(
                 tokens=tokens, voice=voice_path, speed=speed, model=self._model
@@ -259,7 +259,7 @@ class KokoroV1(BaseModelBackend):
             pipeline = self._get_pipeline(pipeline_lang_code)
 
             logger.debug(
-                f"Generating audio for text with lang_code '{pipeline_lang_code}': '{text[:100]}{'...' if len(text) > 100 else ''}'"
+                f"Generating audio for text with lang_code '{pipeline_lang_code}' ({len(text)} chars)"
             )
             for result in pipeline(
                 text, voice=voice_path, speed=speed, model=self._model
@@ -301,9 +301,6 @@ class KokoroV1(BaseModelBackend):
                                             start_time=start_time,
                                             end_time=end_time,
                                         )
-                                    )
-                                    logger.debug(
-                                        f"Added timestamp for word '{token.text}': {start_time:.3f}s - {end_time:.3f}s"
                                     )
 
                             except Exception as e:

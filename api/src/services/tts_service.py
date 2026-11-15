@@ -360,13 +360,13 @@ class TTSService:
                                 yield chunk_data
                             else:
                                 logger.warning(
-                                    f"No audio generated for chunk: '{chunk_text[:100]}...'"
+                                    f"No audio generated for chunk ({len(chunk_text)} chars)"
                                 )
 
                         chunk_index += 1  # Increment chunk index after processing text
                     except Exception as e:
                         logger.error(
-                            f"Failed to process audio for chunk: '{chunk_text[:100]}...'. Error: {str(e)}"
+                            f"Failed to process audio for chunk ({len(chunk_text)} chars). Error: {type(e).__name__}"
                         )
                         continue
 

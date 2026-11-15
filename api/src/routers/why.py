@@ -1,6 +1,7 @@
 """Why TTS router for file-based audio generation with timestamps."""
 
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -89,8 +90,11 @@ async def create_why_tts(
         # Create streaming audio writer for the format
         writer = StreamingAudioWriter(request.response_format, sample_rate=24000)
         
-        # Generate complete audio (non-streaming approach)
-        logger.info(f"Generating audio for text: '{request.input[:100]}...' with voice: {voice_name}")
+        # Generate complete audio (non-streaming approach).
+        # Datenschutz: Der Text ist eine KI-Antwort an ein Kind und wird nie geloggt,
+        # ebenso wenig der Dateiname (er ist die öffentliche Audio-URL). Nur Länge,
+        # Stimme, Sprachcode, Audiodauer und Rechenzeit.
+        started = time.perf_counter()
         
         audio_data = await tts_service.generate_audio(
             text=request.input,
@@ -133,7 +137,11 @@ async def create_why_tts(
         with open(output_path, "wb") as f:
             f.write(complete_audio)
         
-        logger.info(f"Audio file saved to: {output_path}")
+        logger.info(
+            f"why/tts ok: voice={voice_name} lang_code={request.lang_code} "
+            f"chars={len(request.input)} audio_s={duration or 0:.2f} "
+            f"took_ms={(time.perf_counter() - started) * 1000:.0f}"
+        )
         
         # Clean up writer
         writer.close()
@@ -172,7 +180,7 @@ async def create_why_tts(
         )
     except RuntimeError as e:
         # Handle runtime/processing errors
-        logger.error(f"Processing error: {str(e)}")
+        logger.error(f"Processing error: {type(e).__name__}")
         
         try:
             writer.close()
@@ -189,7 +197,7 @@ async def create_why_tts(
         )
     except Exception as e:
         # Handle unexpected errors
-        logger.error(f"Unexpected error in why TTS generation: {str(e)}")
+        logger.error(f"Unexpected error in why TTS generation: {type(e).__name__}")
         
         try:
             writer.close()
