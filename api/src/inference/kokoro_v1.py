@@ -37,6 +37,46 @@ def _create_german_pipeline(device: str) -> KPipeline:
     return pipeline
 
 
+def _load_checkpoint_checked(model: KModel, path: str) -> None:
+    """Lädt einen Kokoro-Checkpoint vollständig und bricht bei Lücken ab.
+
+    Die kikiri-Checkpoints sind mit der neuen Weight-Norm-API von PyTorch
+    gespeichert ("<x>.parametrizations.weight.original0/1"), kokoro 0.9.2 nutzt
+    die alte ("<x>.weight_g/weight_v"). KModel lädt solche Schlüssel nicht und
+    lässt die Gewichte zufällig. Hier werden sie umbenannt.
+
+    Fehlen dürfen nur die affinen Parameter der InstanceNorm in AdaIN
+    ("*.norm.weight/bias"): StyleTTS2 trainiert sie nicht (affine=False), die
+    Startwerte 1/0 entsprechen genau dem.
+    """
+    state = torch.load(path, map_location="cpu", weights_only=True)
+    missing_total = 0
+    for key, sub in state.items():
+        fixed = {}
+        for name, value in sub.items():
+            if name.startswith("module."):
+                name = name[len("module."):]
+            name = name.replace(
+                ".parametrizations.weight.original0", ".weight_g"
+            ).replace(".parametrizations.weight.original1", ".weight_v")
+            fixed[name] = value
+        result = getattr(model, key).load_state_dict(fixed, strict=False)
+        bad_missing = [
+            k for k in result.missing_keys
+            if not (k.endswith(".norm.weight") or k.endswith(".norm.bias"))
+        ]
+        if bad_missing or result.unexpected_keys:
+            raise RuntimeError(
+                f"Checkpoint {os.path.basename(path)}: '{key}' missing "
+                f"{bad_missing[:3]} unexpected {result.unexpected_keys[:3]}"
+            )
+        missing_total += len(result.missing_keys)
+    logger.info(
+        f"Checkpoint {os.path.basename(path)} loaded completely "
+        f"({missing_total} untrained AdaIN norm params left at 1/0)"
+    )
+
+
 class KokoroV1(BaseModelBackend):
     """Kokoro backend with controlled resource management."""
 
@@ -70,11 +110,14 @@ class KokoroV1(BaseModelBackend):
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"Voice model not found: {model_path}")
             logger.info(f"Loading voice model for {voice_name} on {self._device}")
-            # KModel lädt mit torch.load(..., weights_only=True)
+            # KModel lädt mit torch.load(..., weights_only=True), schluckt aber
+            # abweichende Schlüssel stillschweigend (strict=False). Deshalb danach
+            # vollständig und geprüft nachladen.
             model = KModel(
                 repo_id="hexgrad/Kokoro-82M", config=config_path, model=model_path
-            ).eval()
-            self._voice_models[voice_name] = self._to_device(model)
+            )
+            _load_checkpoint_checked(model, model_path)
+            self._voice_models[voice_name] = self._to_device(model.eval())
         # Erstes Modell als Standard, damit is_loaded und Aufrufer ohne Stimme funktionieren
         self._model = next(iter(self._voice_models.values()))
 
