@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8880
 
+    # Log-Level für loguru (Umgebungsvariable LOG_LEVEL). Standard INFO: Auf DEBUG
+    # schreibt die kokoro-Bibliothek selbst Textausschnitte ins Log.
+    log_level: str = "INFO"
+
     # Application Settings
     output_dir: str = "output"
     output_dir_size_limit_mb: float = 500.0  # Maximum size of output directory in MB

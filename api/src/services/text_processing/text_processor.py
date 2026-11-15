@@ -63,7 +63,7 @@ def process_text_chunk(
 
     total_time = time.time() - start_time
     logger.debug(
-        f"Total processing took {total_time * 1000:.2f}ms for chunk: '{text[:50]}{'...' if len(text) > 50 else ''}'"
+        f"Total processing took {total_time * 1000:.2f}ms for chunk: {len(text)} chars"
     )
 
     return tokens
@@ -74,7 +74,7 @@ async def yield_chunk(
 ) -> Tuple[str, List[int]]:
     """Yield a chunk with consistent logging."""
     logger.debug(
-        f"Yielding chunk {chunk_count}: '{text[:50]}{'...' if len(text) > 50 else ''}' ({len(tokens)} tokens)"
+        f"Yielding chunk {chunk_count}: {len(text)} chars ({len(tokens)} tokens)"
     )
     return text, tokens
 
@@ -195,7 +195,7 @@ async def smart_split(
                         chunk_text = " ".join(current_chunk).strip()
                         chunk_count += 1
                         logger.debug(
-                            f"Yielding chunk {chunk_count}: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({current_count} tokens)"
+                            f"Yielding chunk {chunk_count}: {len(chunk_text)} chars ({current_count} tokens)"
                         )
                         yield chunk_text, current_tokens, None
                         current_chunk = []
@@ -234,7 +234,7 @@ async def smart_split(
                                 chunk_text = " ".join(clause_chunk).strip()
                                 chunk_count += 1
                                 logger.debug(
-                                    f"Yielding clause chunk {chunk_count}: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({clause_count} tokens)"
+                                    f"Yielding clause chunk {chunk_count}: {len(chunk_text)} chars ({clause_count} tokens)"
                                 )
                                 yield chunk_text, clause_tokens, None
                             clause_chunk = [full_clause]
@@ -246,7 +246,7 @@ async def smart_split(
                         chunk_text = " ".join(clause_chunk).strip()
                         chunk_count += 1
                         logger.debug(
-                            f"Yielding final clause chunk {chunk_count}: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({clause_count} tokens)"
+                            f"Yielding final clause chunk {chunk_count}: {len(chunk_text)} chars ({clause_count} tokens)"
                         )
                         yield chunk_text, clause_tokens, None
 
@@ -260,7 +260,7 @@ async def smart_split(
                     chunk_text = " ".join(current_chunk).strip()
                     chunk_count += 1
                     logger.info(
-                        f"Yielding chunk {chunk_count}: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({current_count} tokens)"
+                        f"Yielding chunk {chunk_count}: {len(chunk_text)} chars ({current_count} tokens)"
                     )
                     yield chunk_text, current_tokens, None
                     current_chunk = [sentence]
@@ -285,7 +285,7 @@ async def smart_split(
                         chunk_text = " ".join(current_chunk).strip()
                         chunk_count += 1
                         logger.info(
-                            f"Yielding chunk {chunk_count}: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({current_count} tokens)"
+                            f"Yielding chunk {chunk_count}: {len(chunk_text)} chars ({current_count} tokens)"
                         )
                         yield chunk_text, current_tokens, None
                     current_chunk = [sentence]
@@ -297,7 +297,7 @@ async def smart_split(
                 chunk_text = " ".join(current_chunk).strip()
                 chunk_count += 1
                 logger.info(
-                    f"Yielding final chunk {chunk_count} for part: '{chunk_text[:50]}{'...' if len(processed_text) > 50 else ''}' ({current_count} tokens)"
+                    f"Yielding final chunk {chunk_count} for part: {len(chunk_text)} chars ({current_count} tokens)"
                 )
                 yield chunk_text, current_tokens, None
 
