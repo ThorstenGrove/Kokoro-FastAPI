@@ -47,6 +47,46 @@ class KokoroV1(BaseModelBackend):
         self._device = settings.get_device()
         self._model: Optional[KModel] = None
         self._pipelines: Dict[str, KPipeline] = {}  # Store pipelines by lang_code
+        # Ein Modell pro Stimme (VOICE_MODELS), z. B. die deutschen kikiri-Checkpoints,
+        # deren Voicepacks nur zu ihrem eigenen Feintuning passen.
+        self._voice_models: Dict[str, KModel] = {}
+
+    def _to_device(self, model: KModel) -> KModel:
+        """Modell auf das konfigurierte Gerät legen."""
+        if self._device == "mps":
+            return model.to(torch.device("mps"))
+        if self._device == "cuda":
+            return model.cuda()
+        return model.cpu()
+
+    def _load_voice_models(self, voice_models: Dict[str, str]) -> None:
+        """Lädt je Stimme einen eigenen Checkpoint (Kokoro-Format, weights_only)."""
+        config_path = settings.voice_model_config or os.path.join(
+            settings.model_dir, "v1_0", "config.json"
+        )
+        if not os.path.exists(config_path):
+            raise RuntimeError(f"Config file not found: {config_path}")
+        for voice_name, model_path in voice_models.items():
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Voice model not found: {model_path}")
+            logger.info(f"Loading voice model for {voice_name} on {self._device}")
+            # KModel lädt mit torch.load(..., weights_only=True)
+            model = KModel(
+                repo_id="hexgrad/Kokoro-82M", config=config_path, model=model_path
+            ).eval()
+            self._voice_models[voice_name] = self._to_device(model)
+        # Erstes Modell als Standard, damit is_loaded und Aufrufer ohne Stimme funktionieren
+        self._model = next(iter(self._voice_models.values()))
+
+    def _model_for_voice(self, voice_name: str) -> KModel:
+        """Modell zur Stimme; ohne VOICE_MODELS immer das eine Standardmodell."""
+        if not self._voice_models:
+            return self._model
+        model = self._voice_models.get(voice_name)
+        if model is None:
+            # Ein Voicepack mit fremdem Modell klingt falsch; lieber ablehnen.
+            raise RuntimeError(f"No model configured for voice '{voice_name}'")
+        return model
 
     async def load_model(self, path: str) -> None:
         """Load pre-baked model.
@@ -57,6 +97,17 @@ class KokoroV1(BaseModelBackend):
         Raises:
             RuntimeError: If model loading fails
         """
+        voice_models = settings.voice_model_map()
+        if voice_models:
+            # Modus "ein Modell pro Stimme": das Standardmodell wird nicht geladen.
+            try:
+                self._load_voice_models(voice_models)
+                return
+            except FileNotFoundError:
+                raise
+            except Exception as e:
+                raise RuntimeError(f"Failed to load voice models: {e}")
+
         try:
             # Get verified model path
             model_path = await paths.get_model_path(path)
@@ -186,7 +237,10 @@ class KokoroV1(BaseModelBackend):
                 f"Generating audio from tokens with lang_code '{pipeline_lang_code}' ({len(tokens)} chars)"
             )
             for result in pipeline.generate_from_tokens(
-                tokens=tokens, voice=voice_path, speed=speed, model=self._model
+                tokens=tokens,
+                voice=voice_path,
+                speed=speed,
+                model=self._model_for_voice(voice_name),
             ):
                 if result.audio is not None:
                     logger.debug(f"Got audio chunk with shape: {result.audio.shape}")
@@ -287,7 +341,10 @@ class KokoroV1(BaseModelBackend):
                 f"Generating audio for text with lang_code '{pipeline_lang_code}' ({len(text)} chars)"
             )
             for result in pipeline(
-                text, voice=voice_path, speed=speed, model=self._model
+                text,
+                voice=voice_path,
+                speed=speed,
+                model=self._model_for_voice(voice_name),
             ):
                 if result.audio is not None:
                     logger.debug(f"Got audio chunk with shape: {result.audio.shape}")
@@ -371,6 +428,7 @@ class KokoroV1(BaseModelBackend):
 
     def unload(self) -> None:
         """Unload model and free resources."""
+        self._voice_models.clear()
         if self._model is not None:
             del self._model
             self._model = None

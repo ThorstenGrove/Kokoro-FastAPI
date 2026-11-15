@@ -68,15 +68,17 @@ class ModelManager:
             # Use paths module to get voice path
             try:
                 voices = await paths.list_voices()
-                voice_path = await paths.get_voice_path(settings.default_voice)
 
-                # Warm up with short text
+                # Warm up with short text; bei VOICE_MODELS jedes Modell einmal
                 warmup_text = "Warmup text for initialization."
-                # Use default voice name for warmup
-                voice_name = settings.default_voice
-                logger.debug(f"Using default voice '{voice_name}' for warmup")
-                async for _ in self.generate(warmup_text, (voice_name, voice_path)):
-                    pass
+                warmup_voices = list(settings.voice_model_map()) or [
+                    settings.default_voice
+                ]
+                for voice_name in warmup_voices:
+                    voice_path = await paths.get_voice_path(voice_name)
+                    logger.debug(f"Using voice '{voice_name}' for warmup")
+                    async for _ in self.generate(warmup_text, (voice_name, voice_path)):
+                        pass
             except Exception as e:
                 raise RuntimeError(f"Failed to get default voice: {e}")
 

@@ -29,6 +29,23 @@ class Settings(BaseSettings):
         False  # Whether to allow saving combined voices locally
     )
 
+    # Ein Modell pro Stimme (VOICE_MODELS), z. B. für den deutschen Container:
+    #   "dm_martin=/app/de/models/martin.pth,df_victoria=/app/de/models/victoria.pth"
+    # Ist es gesetzt, wird das Standardmodell nicht geladen; jede Stimme braucht
+    # dann einen Eintrag. Leer = bisheriges Verhalten (ein Modell für alle).
+    voice_models: str | None = None
+    # config.json für diese Modelle (Standard: <model_dir>/v1_0/config.json,
+    # identisch mit hexgrad/Kokoro-82M)
+    voice_model_config: str | None = None
+    # Erlaubte lang_codes für /why/tts (ALLOWED_LANG_CODES, kommagetrennt, z. B. "d").
+    # Andere werden mit HTTP 400 abgelehnt, damit das Backend auf den nächsten
+    # Anbieter ausweicht. Leer = alle erlaubt (bisheriges Verhalten).
+    allowed_lang_codes: str | None = None
+    # Löschfrist für erzeugte Dateien in why_output_dir in Stunden
+    # (OUTPUT_RETENTION_HOURS). 0 = nie löschen (bisheriges Verhalten).
+    output_retention_hours: float = 0
+    why_output_dir: str = "/output"
+
     # Container absolute paths
     model_dir: str = "/app/api/src/models"  # Absolute path in container
     voices_dir: str = "/app/api/src/voices/v1_0"  # Absolute path in container
@@ -70,6 +87,26 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    def voice_model_map(self) -> dict[str, str]:
+        """VOICE_MODELS als {stimme: pfad}."""
+        result: dict[str, str] = {}
+        for item in (self.voice_models or "").split(","):
+            if not item.strip():
+                continue
+            name, sep, path = item.partition("=")
+            if not sep or not name.strip() or not path.strip():
+                raise ValueError(f"Invalid VOICE_MODELS entry: {item!r}")
+            result[name.strip()] = path.strip()
+        return result
+
+    def allowed_lang_code_set(self) -> set[str]:
+        """ALLOWED_LANG_CODES als Menge (leer = alle erlaubt)."""
+        return {
+            code.strip().lower()
+            for code in (self.allowed_lang_codes or "").split(",")
+            if code.strip()
+        }
 
     def get_device(self) -> str:
         """Get the appropriate device based on settings and availability"""
