@@ -106,7 +106,19 @@ async def lifespan(app: FastAPI):
     startup_msg += f"\n{boundary}\n"
     logger.info(startup_msg)
 
+    # Löschfrist für /why/tts-Ausgaben (OUTPUT_RETENTION_HOURS > 0)
+    cleanup_task = None
+    if settings.output_retention_hours > 0:
+        import asyncio
+
+        from .services.output_cleanup import run_output_cleanup_loop
+
+        cleanup_task = asyncio.create_task(run_output_cleanup_loop())
+
     yield
+
+    if cleanup_task is not None:
+        cleanup_task.cancel()
 
 
 # Initialize FastAPI app
