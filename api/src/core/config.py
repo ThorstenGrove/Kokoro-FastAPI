@@ -29,6 +29,11 @@ class Settings(BaseSettings):
         False  # Whether to allow saving combined voices locally
     )
 
+    # Löschfrist für erzeugte Dateien in why_output_dir in Stunden
+    # (OUTPUT_RETENTION_HOURS). 0 = nie löschen (bisheriges Verhalten).
+    output_retention_hours: float = 0
+    why_output_dir: str = "/output"
+
     # Container absolute paths
     model_dir: str = "/app/api/src/models"  # Absolute path in container
     voices_dir: str = "/app/api/src/voices/v1_0"  # Absolute path in container

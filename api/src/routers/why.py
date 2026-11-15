@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from ..core.config import settings
 from ..inference.base import AudioChunk
 from ..services.audio import AudioNormalizer, AudioService
 from ..services.streaming_audio_writer import StreamingAudioWriter
@@ -81,7 +82,7 @@ async def create_why_tts(
         random_filename = f"{uuid.uuid4().hex}.{request.response_format}"
         
         # Ensure output directory exists
-        output_dir = Path("/output")
+        output_dir = Path(settings.why_output_dir)
         output_dir.mkdir(exist_ok=True)
         
         # Full path for the output file
