@@ -1,0 +1,53 @@
+# Deutscher Kokoro-Container (tts01.ask-why.app), läuft neben dem unveränderten
+# Produktiv-Container (docker/gpu, Port 8880).
+#
+#   docker compose -f docker/gpu-de/docker-compose.yml build
+#   docker compose -f docker/gpu-de/docker-compose.yml up -d
+#
+# Erreichbar nur lokal auf 127.0.0.1:8890; nginx (deploy/tts01/nginx-ki-home-tts01.conf)
+# reicht /why/tts auf Port 8002 weiter und liefert /output/ selbst aus /var/www/output-de.
+#
+# VRAM (Schätzung, nicht gemessen): 2 × Kokoro-82M fp32 ≈ 0,65 GB Gewichte,
+# CUDA-Kontext ≈ 0,3–0,5 GB, Arbeitsspeicher der Inferenz ≈ 0,2–0,5 GB
+# → ca. 1,2–1,7 GB. Das Standardmodell wird in diesem Container nicht geladen.
+name: kokoro-tts-de
+
+services:
+  kokoro-tts-de:
+    build:
+      context: ../..
+      dockerfile: docker/gpu-de/Dockerfile
+    image: kokoro-tts-de:local
+    restart: unless-stopped
+    user: "1001:1001"
+    ports:
+      - "127.0.0.1:8890:8880"
+    volumes:
+      # Eigenes Ausgabeverzeichnis, getrennt von /var/www/output des Produktiv-Containers.
+      # Vorher anlegen: install -d -o 1001 -g 1001 -m 755 /var/www/output-de
+      - /var/www/output-de:/output
+    environment:
+      # Werte stehen auch im Image; hier zur Übersicht und zum Anpassen ohne Neubau.
+      - ALLOWED_LANG_CODES=d
+      - DEFAULT_VOICE=df_victoria
+      - OUTPUT_RETENTION_HOURS=24
+      - LOG_LEVEL=INFO
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8880/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
