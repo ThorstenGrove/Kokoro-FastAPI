@@ -45,8 +45,10 @@ def test_voice_model_map_and_lang_codes():
         "df_victoria": "/m/victoria.pth",
     }
     assert s.allowed_lang_code_set() == {"d"}
-    assert Settings().voice_model_map() == {}
-    assert Settings().allowed_lang_code_set() == set()
+    # Im DE-Image sind VOICE_MODELS/ALLOWED_LANG_CODES gesetzt; ausdrücklich leeren
+    empty = Settings(voice_models=None, allowed_lang_codes=None)
+    assert empty.voice_model_map() == {}
+    assert empty.allowed_lang_code_set() == set()
 
 
 def test_voice_model_map_rejects_garbage():
