@@ -15,6 +15,28 @@ from ..structures.schemas import WordTimestamp
 from .base import AudioChunk, BaseModelBackend
 
 
+GERMAN_LANG_CODE = "d"
+
+
+def _create_german_pipeline(device: str) -> KPipeline:
+    """KPipeline für Deutsch (lang_code "d").
+
+    kokoro 0.9.2 kennt "d" nicht (LANG_CODES). Die Pipeline wird deshalb als
+    espeak-Pipeline ohne Modell angelegt und danach auf den deutschen G2P
+    umgestellt. Für alles außer "a"/"b" ruft KPipeline nur self.g2p(chunk) auf
+    und erwartet (phoneme, None); genau das liefert DEG2P. Das Modell wird pro
+    Aufruf übergeben (ein Modell pro Stimme, siehe _model_for_voice).
+    """
+    from ..services.text_processing.german_g2p import DEG2P
+
+    pipeline = KPipeline(
+        lang_code="e", repo_id="hexgrad/Kokoro-82M", model=False, device=device
+    )
+    pipeline.lang_code = GERMAN_LANG_CODE
+    pipeline.g2p = DEG2P()
+    return pipeline
+
+
 class KokoroV1(BaseModelBackend):
     """Kokoro backend with controlled resource management."""
 
@@ -79,9 +101,12 @@ class KokoroV1(BaseModelBackend):
 
         if lang_code not in self._pipelines:
             logger.info(f"Creating new pipeline for language code: {lang_code}")
-            self._pipelines[lang_code] = KPipeline(
-                lang_code=lang_code, model=self._model, device=self._device
-            )
+            if lang_code == GERMAN_LANG_CODE:
+                self._pipelines[lang_code] = _create_german_pipeline(self._device)
+            else:
+                self._pipelines[lang_code] = KPipeline(
+                    lang_code=lang_code, model=self._model, device=self._device
+                )
         return self._pipelines[lang_code]
 
     async def generate_from_tokens(
