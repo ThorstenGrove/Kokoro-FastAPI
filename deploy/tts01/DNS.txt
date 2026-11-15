@@ -1,0 +1,17 @@
+DNS-Umstellung tts01.ask-why.app (Cloudflare, ohne Proxy, TTL 300)
+
+Heute:      tts01  A  135.181.8.214   (alter Server, antwortet nicht; Stand 15.11.2026)
+
+Übergang (Austrittspunkt Relay):
+            tts01  A     78.46.148.156
+            tts01  AAAA  2a01:4f8:c17:53b8::1
+
+Zielbild (Austrittspunkt Docker-Host, zusammen mit stt02/tts02):
+            tts01  A     159.69.122.50
+            tts01  AAAA  2a01:4f8:c013:e4a5::1
+
+Reihenfolge: DNS zuerst (certbot braucht ihn für HTTP-01), dann Zertifikat und
+Vhost am Austrittspunkt. Cloudflare-Proxy aus lassen (grau), sonst endet TLS bei
+Cloudflare und die IP-Freigabe für /why/tts sieht Cloudflare-Adressen.
+Prüfen: dig +short tts01.ask-why.app A; dig +short tts01.ask-why.app AAAA
+Einen AAAA-Eintrag nur setzen, wenn der Austrittspunkt auf IPv6 lauscht.

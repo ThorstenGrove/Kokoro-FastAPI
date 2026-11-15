@@ -1,0 +1,14 @@
+# /etc/logrotate.d/nginx-tts01 auf ki.home
+# Debians logrotate für nginx erfasst nur /var/log/nginx/*.log, nicht Unterordner.
+/var/log/nginx/tts01/*.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        invoke-rc.d nginx rotate >/dev/null 2>&1 || true
+    endscript
+}

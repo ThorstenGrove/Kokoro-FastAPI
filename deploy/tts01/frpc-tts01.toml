@@ -1,0 +1,27 @@
+# frpc auf ki.home (/opt/frp/frpc.toml): zusätzlicher Tunnel für tts01.
+#
+# Nur diesen Abschnitt unten an die bestehende Datei anhängen; serverAddr,
+# serverPort und auth.* bleiben, wie sie sind. Danach:
+#   /opt/frp/frpc verify -c /opt/frp/frpc.toml && systemctl restart frpc
+# (restart statt reload: reload greift nur, wenn das Admin-Interface aktiv ist.)
+#
+# Ein frpc verbindet sich mit genau einem frps. Alle Tunnel (tts-service,
+# stt-service, tts01-de) enden deshalb immer am selben Austrittspunkt und ziehen
+# gemeinsam um.
+
+[[proxies]]
+name = "tts01-de"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 8002
+remotePort = 8002
+
+# ---------------------------------------------------------------------------
+# Umzug auf den Docker-Host (Zielbild): Kopf der Datei dann so, die drei
+# [[proxies]]-Abschnitte bleiben unverändert.
+#
+# serverAddr = "docker.srv.grove.eco"   # bzw. 159.69.122.50
+# serverPort = 7000
+# auth.method = "token"
+# auth.token = "<NEUES_FRP_TOKEN_DOCKER_HOST>"   # nicht ins Repo
+# transport.tls.enable = true                    # Standard seit frp 0.50, hier ausdrücklich

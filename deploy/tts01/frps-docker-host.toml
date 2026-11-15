@@ -1,0 +1,31 @@
+# frps auf dem Docker-Host (Zielbild), z. B. /opt/frp/frps.toml, Version wie
+# auf ki.home (frp 0.65.0). Ersetzt später das frps auf dem Relay für alle
+# Tunnel von ki.home (stt02, tts02, tts01).
+#
+# - Die Tunnel-Ports lauschen nur auf 127.0.0.1; erreichbar sind sie nur über
+#   den nginx des Docker-Hosts (TLS). Von außen offen ist nur bindPort 7000.
+# - Eigenes Token (nicht das des Relays), nur auf dem Server und in frpc.toml
+#   auf ki.home, nie im Repo:  openssl rand -base64 32
+# - Kein Dashboard.
+
+bindAddr = "0.0.0.0"
+bindPort = 7000
+proxyBindAddr = "127.0.0.1"
+allowPorts = [
+  { start = 8000, end = 8002 },
+]
+
+auth.method = "token"
+auth.token = "<NEUES_FRP_TOKEN_DOCKER_HOST>"
+
+transport.tls.force = true
+
+log.to = "/var/log/frp/frps.log"
+log.level = "info"
+log.maxDays = 7
+
+# Port-Belegung (müssen auf dem Docker-Host frei sein, sonst hier und in
+# frpc.toml remotePort ändern und im nginx-Upstream nachziehen):
+#   8000 → tts02 (Kokoro, alle Sprachen außer Deutsch)
+#   8001 → stt02 (Spracherkennung)
+#   8002 → tts01 (Kokoro Deutsch)
