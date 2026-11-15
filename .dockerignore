@@ -38,3 +38,6 @@ tests/
 # Docker
 Dockerfile*
 docker-compose*
+
+# Versionsstand für das deutsche Image (docker/gpu-de)
+!docker/gpu-de/constraints.txt
