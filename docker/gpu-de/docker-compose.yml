@@ -31,6 +31,10 @@ services:
       - ALLOWED_LANG_CODES=d
       # G2P: mideki (Normalisierung/Overrides aus mideki) oder misaki (Rückweg)
       - DE_G2P=mideki
+      # Martin liegt ca. 6 dB über Victoria und clippt beim volume_multiplier 2
+      # des Backends (gemessen 18.11.2026: Mittel -14,9 dB, 2139 Samples im
+      # 0-dB-Bereich; mit -6 dB: -20,9 dB, Spitze -2,9 dB, Victoria -20,5 dB)
+      - VOICE_GAIN_DB=dm_martin=-6
       - DEFAULT_VOICE=df_victoria
       - OUTPUT_RETENTION_HOURS=24
       - LOG_LEVEL=INFO

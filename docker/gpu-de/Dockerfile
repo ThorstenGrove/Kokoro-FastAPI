@@ -80,6 +80,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     DEFAULT_VOICE=df_victoria \
     ALLOWED_LANG_CODES=d \
     DE_G2P=mideki \
+    VOICE_GAIN_DB="dm_martin=-6" \
     WHY_OUTPUT_DIR=/output \
     OUTPUT_RETENTION_HOURS=24 \
     ENABLE_WEB_PLAYER=false \
