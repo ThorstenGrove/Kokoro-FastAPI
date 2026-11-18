@@ -29,6 +29,8 @@ services:
     environment:
       # Werte stehen auch im Image; hier zur Übersicht und zum Anpassen ohne Neubau.
       - ALLOWED_LANG_CODES=d
+      # G2P: mideki (Normalisierung/Overrides aus mideki) oder misaki (Rückweg)
+      - DE_G2P=mideki
       - DEFAULT_VOICE=df_victoria
       - OUTPUT_RETENTION_HOURS=24
       - LOG_LEVEL=INFO

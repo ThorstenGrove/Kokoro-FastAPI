@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Andere werden mit HTTP 400 abgelehnt, damit das Backend auf den nächsten
     # Anbieter ausweicht. Leer = alle erlaubt (bisheriges Verhalten).
     allowed_lang_codes: str | None = None
+    # Deutscher G2P (DE_G2P): "misaki" (DEG2P aus misaki PR #97), "mideki"
+    # (mideki-Normalisierung und -Overrides, Phonemisierung wie im Training) oder
+    # "mideki-word" (nur zum Vergleich). Siehe german_frontend.py.
+    de_g2p: str = "misaki"
+    # Pegel je Stimme in dB (VOICE_GAIN_DB, z. B. "dm_martin=-6"), vor
+    # volume_multiplier und der int16-Wandlung. Leer = unverändert.
+    voice_gain_db: str | None = None
     # Löschfrist für erzeugte Dateien in why_output_dir in Stunden
     # (OUTPUT_RETENTION_HOURS). 0 = nie löschen (bisheriges Verhalten).
     output_retention_hours: float = 0
@@ -98,6 +105,18 @@ class Settings(BaseSettings):
             if not sep or not name.strip() or not path.strip():
                 raise ValueError(f"Invalid VOICE_MODELS entry: {item!r}")
             result[name.strip()] = path.strip()
+        return result
+
+    def voice_gain_map(self) -> dict[str, float]:
+        """VOICE_GAIN_DB als {stimme: lineare verstärkung}."""
+        result: dict[str, float] = {}
+        for item in (self.voice_gain_db or "").split(","):
+            if not item.strip():
+                continue
+            name, sep, value = item.partition("=")
+            if not sep or not name.strip():
+                raise ValueError(f"Invalid VOICE_GAIN_DB entry: {item!r}")
+            result[name.strip()] = 10 ** (float(value) / 20)
         return result
 
     def allowed_lang_code_set(self) -> set[str]:

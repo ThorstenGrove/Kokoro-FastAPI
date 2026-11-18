@@ -24,16 +24,24 @@ def _create_german_pipeline(device: str) -> KPipeline:
     kokoro 0.9.2 kennt "d" nicht (LANG_CODES). Die Pipeline wird deshalb als
     espeak-Pipeline ohne Modell angelegt und danach auf den deutschen G2P
     umgestellt. Für alles außer "a"/"b" ruft KPipeline nur self.g2p(chunk) auf
-    und erwartet (phoneme, None); genau das liefert DEG2P. Das Modell wird pro
+    und erwartet (phoneme, None); das liefert GermanG2P (Variante per DE_G2P). Das Modell wird pro
     Aufruf übergeben (ein Modell pro Stimme, siehe _model_for_voice).
     """
-    from ..services.text_processing.german_g2p import DEG2P
+    import json
+
+    from ..services.text_processing.german_frontend import GermanG2P
+
+    config_path = settings.voice_model_config or os.path.join(
+        settings.model_dir, "v1_0", "config.json"
+    )
+    with open(config_path, encoding="utf-8") as f:
+        vocab = json.load(f)["vocab"]
 
     pipeline = KPipeline(
         lang_code="e", repo_id="hexgrad/Kokoro-82M", model=False, device=device
     )
     pipeline.lang_code = GERMAN_LANG_CODE
-    pipeline.g2p = DEG2P()
+    pipeline.g2p = GermanG2P(settings.de_g2p, vocab)
     return pipeline
 
 
@@ -90,6 +98,8 @@ class KokoroV1(BaseModelBackend):
         # Ein Modell pro Stimme (VOICE_MODELS), z. B. die deutschen kikiri-Checkpoints,
         # deren Voicepacks nur zu ihrem eigenen Feintuning passen.
         self._voice_models: Dict[str, KModel] = {}
+        # Pegel je Stimme (VOICE_GAIN_DB), linear
+        self._voice_gain: Dict[str, float] = settings.voice_gain_map()
 
     def _to_device(self, model: KModel) -> KModel:
         """Modell auf das konfigurierte Gerät legen."""
@@ -287,7 +297,7 @@ class KokoroV1(BaseModelBackend):
             ):
                 if result.audio is not None:
                     logger.debug(f"Got audio chunk with shape: {result.audio.shape}")
-                    yield result.audio.numpy()
+                    yield result.audio.numpy() * self._voice_gain.get(voice_name, 1.0)
                 else:
                     logger.warning("No audio in chunk")
 
@@ -434,7 +444,8 @@ class KokoroV1(BaseModelBackend):
                                 )
 
                     yield AudioChunk(
-                        result.audio.numpy(), word_timestamps=word_timestamps
+                        result.audio.numpy() * self._voice_gain.get(voice_name, 1.0),
+                        word_timestamps=word_timestamps
                     )
                 else:
                     logger.warning("No audio in chunk")

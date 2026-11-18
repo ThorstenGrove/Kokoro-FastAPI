@@ -56,6 +56,12 @@ COPY --chown=appuser:appuser docker/gpu-de/constraints.txt ./constraints.txt
 RUN uv venv --python 3.10 && \
     uv pip install --no-cache -r pyproject.toml --extra gpu -c constraints.txt
 
+# mideki (ichDaheim/mideki, Apache-2.0) für DE_G2P=mideki: Tag 1.4.0 als Commit
+# gepinnt. Abhängigkeiten (phonemizer-fork 3.3.2, espeakng-loader 0.2.4, regex)
+# sind oben schon in denselben Versionen installiert, deshalb --no-deps.
+RUN uv pip install --no-cache --no-deps \
+    "mideki @ git+https://github.com/ichDaheim/mideki@48cff354c4bdce4a3beddaca58741c0b8d10e9ec"
+
 # Code ins Image (kein Bind-Mount wie beim Produktiv-Container, damit ein
 # Branch-Wechsel im Checkout den laufenden Container nicht verändert).
 COPY --chown=appuser:appuser api ./api
@@ -73,6 +79,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     VOICES_DIR=/app/de/voices \
     DEFAULT_VOICE=df_victoria \
     ALLOWED_LANG_CODES=d \
+    DE_G2P=mideki \
     WHY_OUTPUT_DIR=/output \
     OUTPUT_RETENTION_HOURS=24 \
     ENABLE_WEB_PLAYER=false \

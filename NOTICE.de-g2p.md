@@ -12,3 +12,14 @@ Dateikopf). Der restliche Inhalt ist unverändert.
 Laufzeit: `misaki.espeak.EspeakG2P` nutzt `phonemizer-fork` (GPL-3.0) und die über
 `espeakng-loader` mitgelieferte eSpeak-NG-Bibliothek (GPL-3.0), wie schon die übrigen
 espeak-Sprachen dieses Images.
+
+## mideki (DE_G2P=mideki)
+
+Paket `mideki` 1.4.0 (https://github.com/ichDaheim/mideki, Commit
+`48cff354c4bdce4a3beddaca58741c0b8d10e9ec`, Tag `1.4.0`), Apache License 2.0, selbst
+abgeleitet aus misaki/semidark-misaki (Apache-2.0) und kikiri-tts (Overrides). Wird zur
+Laufzeit installiert, nicht kopiert. Genutzt werden nur `normalize_text_de` und das
+Override-Lexikon; die Phonemisierung bleibt bei `misaki.espeak.EspeakG2P`, mit dem die
+kikiri-Stimmen trainiert wurden. Die Override-Werte (mideki-Symbolsatz) werden in
+`german_frontend.py` auf den Trainings-Symbolsatz abgebildet (`ʋ`→`ɔø`, `ꭧ`→`pf`,
+`æ`→`ɛ`, `ʏ`→`y`).

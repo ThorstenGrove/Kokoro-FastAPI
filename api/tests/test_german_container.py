@@ -66,3 +66,77 @@ def test_german_g2p_produces_phonemes():
 
     ps, _ = DEG2P()("Warum ist der Himmel blau?")
     assert ps and len(ps) > 10
+
+
+# --- DE_G2P: mideki/misaki gegen das Modell-Vokabular ---------------------------
+
+import json as _json
+
+_VOCAB = _json.load(
+    open(
+        os.path.join(os.path.dirname(__file__), "..", "src", "models", "v1_0", "config.json"),
+        encoding="utf-8",
+    )
+)["vocab"]
+
+_SAETZE = [
+    "Fünf Bücher über Glück und Mütter liegen im Küchenschrank.",
+    "Heute ist es heiß, die Eule und die Mäuse schlafen. Der Pfau zupft an seinem Kopf.",
+    "Am 3. Mai 2027 um 14:30 Uhr kostet der Kuchen 12,50 €.",
+    "Beim Skateboarden schauen wir ein YouTube-Video am Computer.",
+    "Ja, genau!",
+]
+
+
+@pytest.mark.parametrize("variant", ["misaki", "mideki", "mideki-word"])
+def test_german_g2p_stays_in_vocab(variant):
+    from api.src.services.text_processing.german_frontend import GermanG2P, unknown_symbols
+
+    g2p = GermanG2P(variant, _VOCAB)
+    for satz in _SAETZE:
+        ps, _ = g2p(satz)
+        assert ps
+        assert unknown_symbols(ps, _VOCAB) == []
+    assert g2p.dropped_total == 0
+
+
+def test_all_mideki_overrides_map_into_vocab():
+    from mideki.overrides import load_raw_overrides
+
+    from api.src.services.text_processing.german_frontend import (
+        MIDEKI_TO_TRAINING,
+        apply_map,
+        unknown_symbols,
+    )
+
+    raw = load_raw_overrides()
+    bad = {}
+    for section in ("brand", "en", "de_foreign", "de_native"):
+        for key, value in raw.get(section, {}).items():
+            unknown = unknown_symbols(apply_map(value, MIDEKI_TO_TRAINING), _VOCAB)
+            if unknown:
+                bad[key] = unknown
+    assert bad == {}
+
+
+def test_mideki_normalization_fixes_ordinal_and_keeps_numbers():
+    from mideki.normalize import normalize_text_de as mideki_norm
+
+    text = mideki_norm("Am 3. Mai um 14:30 Uhr kostet es 12,50 €.")
+    assert "dritten Mai" in text
+    assert "vierzehn Uhr dreißig" in text
+    assert "zwölf Euro und fünfzig Cent" in text
+
+
+def test_short_u_is_mapped_like_in_training():
+    from api.src.services.text_processing.german_frontend import GermanG2P
+
+    ps, _ = GermanG2P("misaki", _VOCAB)("Glück")
+    assert "ʏ" not in ps and "y" in ps
+
+
+def test_voice_gain_map():
+    s = Settings(voice_gain_db="dm_martin=-6, df_victoria=0")
+    gains = s.voice_gain_map()
+    assert abs(gains["dm_martin"] - 0.501) < 0.01
+    assert gains["df_victoria"] == 1.0
